@@ -89,3 +89,19 @@ exit
 vagrant destroy -f
 ```
   для окончания работы и разрушения виртуальной машины.
+
+## 2. Вопросы после выполнения домашнего задания:
+   
+ - Откуда мы знаем, что после выполнения
+ 
+```
+sudo parted /dev/md0 mkpart primary xfs 0% 20%
+sudo parted /dev/md0 mkpart primary xfs 20% 40%
+sudo parted /dev/md0 mkpart primary xfs 40% 60%
+sudo parted /dev/md0 mkpart primary xfs 60% 80%
+sudo parted /dev/md0 mkpart primary xfs 80% 100%
+```
+   полученные партиции будут иметь названия ```/dev/md0p{1..5}``` ?
+   
+- При создании VM через Vagrant получаю следующую ошибку:
+  
