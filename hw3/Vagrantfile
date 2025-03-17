@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+ENV['VAGRANT_SERVER_URL'] = 'https://vagrant.elab.pro'
+
+Vagrant.configure("2") do |config|
+    config.vm.define "ubuntu24" do |node|
+          node.vm.box = "bento/ubuntu-24.04"
+          node.vm.hostname = "ubuntu24"
+	  node.vm.box_check_update = false
+          node.ssh.insert_key = false
+          #box.vm.network "forwarded_port", guest: 3260, host: 3260+offset
+          node.vm.network "private_network", ip: "192.168.56.100"
+          node.vm.provider :virtualbox do |vb|
+	    unless File.exist?('./secondDisk.vdi')
+              vb.customize ['createhd', '--filename', './secondDisk.vdi', '--variant', 'Fixed', '--size', 10240]
+            end
+            unless File.exist?('./thirdDisk.vdi')
+              vb.customize ['createhd', '--filename', './thirdDisk.vdi', '--variant', 'Fixed', '--size', 2048]
+            end
+            unless File.exist?('./fourthDisk.vdi')
+              vb.customize ['createhd', '--filename', './fourthDisk.vdi', '--variant', 'Fixed', '--size', 1024]
+            end
+             unless File.exist?('./fifthDisk.vdi')
+              vb.customize ['createhd', '--filename', './fifthDisk.vdi', '--variant', 'Fixed', '--size', 1024]
+            end
+            vb.memory = "1024"
+            vb.name = "ubuntu24"
+            vb.cpus = 1
+            vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller' , '--port', 1, '--device', 0, '--type', 'hdd', '--medium', './secondDisk.vdi']
+            vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller' , '--port', 2, '--device', 0, '--type', 'hdd', '--medium', './thirdDisk.vdi']
+            vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller' , '--port', 3, '--device', 0, '--type', 'hdd', '--medium', './fourthDisk.vdi']
+            vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller' , '--port', 4, '--device', 0, '--type', 'hdd', '--medium', './fifthDisk.vdi']
+          end
+#          node.vm.provision :shell, path: "provision.sh", keep_color: "true"
+          node.vm.provision "shell", inline: <<-SHELL
+              mkdir -p ~root/.ssh
+              cp ~vagrant/.ssh/auth* ~root/.ssh
+#              /vagrant/script.sh
+          SHELL
+      end
+end
