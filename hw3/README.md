@@ -33,18 +33,20 @@
 ```
 sudo lsblk
 ``` 
-![01]./screenshots/01.png
-
-```
-sudo lvmdiskscan
-
-``` 
-![02]./screenshots/02.png
+![01](./screenshots/01.png)
 
 ```
 # устанавливаем необходимый пакет
 sudo yum install -y lvm2
-# находим переменную /dev/sdb
+sudo lvmdiskscan
+
+``` 
+![02](./screenshots/02.png)
+
+```
+- Создаем LVG с двумя разделами
+
+# определяем переменную BASEDISK = /dev/sdb
 BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
 # создаём LVG otus на устройстве /dev/sdb
 sudo pvcreate $BASEDISK
@@ -52,44 +54,36 @@ sudo vgcreate otus $BASEDISK
 # создаем 2 лог. раздела: /dev/otus/test и /dev/otus/small
 sudo lvcreate -l+80%FREE -n test otus
 sudo lvcreate -L100M -n small otus
-# создаём ФС ext4 на /dev/otus/test и монтируем в ~/data/
-sudo mkfs.ext4 /dev/otus/test
+# создаём ФС xfs на /dev/otus/test и монтируем в ~/data/
+sudo mkfs.xfs /dev/otus/test
 mkdir /home/vagrant/data
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
 
 ``` 
-
->x86_64
-
- - значит, архитектура amd64
-
-2.  Определяем подходящую версию ядра:
-
-на сайте https://kernel.org/ ищем последнюю поддерживаемую версию ядра, которая начинается с 5: 5.15.178 \
-на сайте https://kernel.ubuntu.com/mainline/ заходим в репозиторий v5.15.178, \
-далее заходим в amd64/, правой кнопкой мыши копируем ссылки, начинающиеся с linux-, скачиваем через wget: 
+Проверяем, что всё верно: смотрим информацию о volume groups, \
+physical volumes и logical volumes:
 
 ```
-mkdir kernel && cd kernel    
-wget https://kernel.ubuntu.com/mainline/v5.15.178/amd64/linux-headers-5.15.178-0515178-generic_5.15.178-0515178.202502230832_amd64.deb
-wget https://kernel.ubuntu.com/mainline/v5.15.178/amd64/linux-headers-5.15.178-0515178_5.15.178-0515178.202502230832_all.deb
-wget https://kernel.ubuntu.com/mainline/v5.15.178/amd64/linux-image-unsigned-5.15.178-0515178-generic_5.15.178-0515178.202502230832_amd64.deb
-wget https://kernel.ubuntu.com/mainline/v5.15.178/amd64/linux-modules-5.15.178-0515178-generic_5.15.178-0515178.202502230832_amd64.deb
-sudo dpkg -i *.deb
+sudo vgdisplay  | grep -i ' name'
+sudo vgdisplay -v | grep -i 'pv name'
+sudo vgdisplay -v | grep -i 'lv name'
 ```
->**dpkg**: зависимости пакетов не позволяют настроить пакет linux-headers-5.15.178-0515178-generic: \
->linux-headers-5.15.178-0515178-generic зависит от libc6 (>= 2.34), однако: \
-> Версия libc6:amd64 в системе — 2.31-0ubuntu9.9. \
-> linux-headers-5.15.178-0515178-generic зависит от libssl3 (>= 3.0.0~~alpha1), однако: \
-> Пакет libssl3 не установлен. \
-> **dpkg**: ошибка при обработке пакета linux-headers-5.15.178-0515178-generic (--install): \
-> проблемы зависимостей — оставляем не настроенным 
 
-получили ошибку: не хватает зависимостей для установки пакета linux-headers-5.15.178-0515178-generic \
-чтобы установить недостающие пакеты, добавим строку в файл sources.list и обновимся:
+![03](./screenshots/03.png)
 
-`sudo nano /etc/apt/sources.list`
+- Расширим LV ```/dev/otus/test``` за счет добавления диска в LVM
+
+```
+#  определяем переменную SNAPDISK = /dev/sdc
+SNAPDISK=$(sudo lsblk | grep 2G | grep disk | awk '{print "/dev/"$1}' )
+# расширяем LVG за счёт /dev/sdc
+sudo pvcreate $SNAPDISK
+sudo vgextend otus $SNAPDISK
+# занимаем всё место на /dev/otus/test
+dd if=/dev/random of=/home/vagrant/data/test.log \
+    bs=1M count=8000 status=progress
+```
 
 > добавляем в файл sources.list строку: ```deb http://security.ubuntu.com/ubuntu jammy-security main``` 
 
