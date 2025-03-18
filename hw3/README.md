@@ -40,7 +40,6 @@ sudo lsblk
 # устанавливаем необходимый пакет
 sudo yum install -y lvm2
 sudo lvmdiskscan
-
 ``` 
 
 ![02](./screenshots/02.png)
