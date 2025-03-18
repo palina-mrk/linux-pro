@@ -87,7 +87,7 @@ SNAPDISK=$(sudo lsblk | grep 2G | grep disk | awk '{print "/dev/"$1}' )
 sudo pvcreate $SNAPDISK
 sudo vgextend otus $SNAPDISK
 # занимаем всё место на /dev/otus/small и /dev/otus/and
-dd if=/dev/random of=/home/vagrant/and/test.log \
+dd if=/dev/random of=/home/vagrant/data/test.log \
     bs=1M count=8000 status=progress
 dd if=/dev/random of=/home/vagrant/and/test.log \
     bs=1M count=8000 status=progress
@@ -146,7 +146,7 @@ xfs будет удалена после ввода w, поэтому вводи
 
 ```
 Command (m for help): w
-sudo lvreduce -y /dev/otus/test -L 10G
+sudo lvreduce -y /dev/otus/test -L 1G
 sudo mkfs.xfs -f /dev/otus/test 
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
@@ -162,67 +162,46 @@ sudo rm -rf /home/vagrant/mirror/*
 
 ![07](./screenshots/07.png)
 
-Затем пришлось перезагррузить VM, потому что она зависла.\
-До перезагрузки создать и смонтировать снапшот не получалось. \
-Воспроизводим ситуацию до перезагрузки со смонтированными томами:
-
-```
-mkdir /home/vagrant/data
-mkdir /home/vagrant/and
-mkdir /home/vagrant/data-snap
-mkdir /home/vagrant/mirror
-sudo mount /dev/otus/test /home/vagrant/data/
-sudo mount /dev/otus/small /home/vagrant/and/
-sudo mount /dev/vg0/mirror /home/vagrant/mirror/
-```
-
-![08](./screenshots/08.png)
-
-```
-sudo systemctl daemon-reload
-sudo mount /dev/otus/test /home/vagrant/data/
-sudo mount /dev/otus/small /home/vagrant/and/
-sudo mount /dev/vg0/mirror /home/vagrant/mirror/
-```
-
 - Создание снапшота
 
-xfs требует выполнить xfs_freeze на смонтированном томе \
+xfs  \
 перед созданием снапшота с него
 
 ```
 #создаём снапшот
-sudo xfs_freeze -f /home/vagrant/data
-sudo lvcreate -L500M -s -n test-snap /dev/otus/test
-sudo xfs_freeze -u /home/vagrant/data
-```
-
-
-```
-sudo mount /dev/otus/test /home/vagrant/data
-sudo mount /dev/otus/test-snap /home/vagrant/data-snap
-sudo lsblk
+sudo lvcreate -L100m -s -n test-snap /dev/otus/test
+sudo mount -o nouuid,ro /dev/otus/test-snap /home/vagrant/data-snap
+sudo lvs
 ```
 
 ![08](./screenshots/08.png)
 
-``` 
-# монтируем и размонтируем снапшот
-mkdir /home/vagrant/data-snap
-sudo mount /dev/otus/test-snap /home/vagrant/data-snap/
-sudo chown -R vagrant:vagrant /home/vagrant/data-snap
-sudo umount /home/vagrant/data-snap
+Создаём файлы в /dev/otus/data
+
 ```
+touch /home/vagrant/data/file{1,2,3,4,5}
+dd if=/dev/random of=/home/vagrant/data/file1 bs=1M count=70
+sudo lvs
+```
+
+![09](./screenshots/09.png)
+
+Поле "Data" в строке снэпшота изменилось.
 
 ```
 # восстанавливаемся со снапшота
+sudo umount /home/vagrant/data-snap
 sudo umount /home/vagrant/data
 sudo lvconvert --merge /dev/otus/test-snap
 sudo mount /dev/otus/test /home/vagrant/data
 sudo chown -R vagrant:vagrant /home/vagrant/data-snap
+```
+Восстановление прошло успешно.
+
+![10](./screenshots/10.png)
 
 ```
-
+```
 
 ***после перезагрузки***
 
