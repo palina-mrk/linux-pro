@@ -164,9 +164,6 @@ sudo rm -rf /home/vagrant/mirror/*
 
 - Создание снапшота
 
-xfs  \
-перед созданием снапшота с него
-
 ```
 #создаём снапшот
 sudo lvcreate -L100m -s -n test-snap /dev/otus/test
@@ -200,7 +197,21 @@ sudo chown -R vagrant:vagrant /home/vagrant/data-snap
 
 ![10](./screenshots/10.png)
 
+Записываем точки монтирования в fstab, но перед этим делаем копию \
+etc/fstab для восстановления чистой системы перед следующим упражнением.
+
 ```
+sudo cp /etc/fstab /etc/fstab.bkp
+touch /home/vagrant/data/file.tmp
+sudo cat /etc/fstab > /home/vagrant/data/file.tmp
+for i in otus-test vg0-mirror otus-small ;
+do
+      echo "$( sudo blkid | grep "\/dev\/mapper\/$i:"  | awk '{print $2}' ) \
+      $( df -h | grep "\/dev\/mapper\/$i" | awk '{print $6}' ) \
+      xfs defaults 0 0" >> /home/vagrant/data/file.tmp;
+done
+sudo cp /home/vagrant/data/file.tmp /etc/fstab
+exit
 ```
 
 ***после перезагрузки***
@@ -213,5 +224,6 @@ sudo vgremove -f otus
 ```
 
 
-## 2. 
+## 2. Изменение корневого раздела.
+
 
