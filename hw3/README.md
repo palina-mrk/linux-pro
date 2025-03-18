@@ -60,6 +60,11 @@ sudo mkfs.xfs /dev/otus/test
 mkdir /home/vagrant/data
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
+# создаём ФС xfs на /dev/otus/small и монтируем в ~/data/
+sudo mkfs.xfs /dev/otus/small
+mkdir /home/vagrant/and
+sudo mount /dev/otus/small /home/vagrant/and/
+sudo chown -R vagrant:vagrant /home/vagrant/and
 ```
 
 Проверяем, что всё верно: смотрим информацию о ```volume groups```, \
@@ -81,28 +86,83 @@ SNAPDISK=$(sudo lsblk | grep 2G | grep disk | awk '{print "/dev/"$1}' )
 # расширяем LVG за счёт /dev/sdc
 sudo pvcreate $SNAPDISK
 sudo vgextend otus $SNAPDISK
-# занимаем всё место на /dev/otus/test
-dd if=/dev/random of=/home/vagrant/data/test.log \
+# занимаем всё место на /dev/otus/small и /dev/otus/and
+dd if=/dev/random of=/home/vagrant/and/test.log \
+    bs=1M count=8000 status=progress
+dd if=/dev/random of=/home/vagrant/and/test.log \
     bs=1M count=8000 status=progress
 ```
 
+К сожалению, команда ```dd``` не заполнила полностью ни один из разделов:
+
+![04](./screenshots/04.png)
 
 ```
 # расширяем том /dev/otus/test
 sudo lvextend -l+80%FREE /dev/otus/test
-sudo resize2fs /dev/otus/test
+sudo xfs_growfs /dev/otus/test
 ```
 
+Теперь нужно уменьшить раздел ```/dev/otus/test```. \
+Но xfs не умеет уменьшаться, поэтому сначала создадим mirror \
+на /dev/sdb/ и /dev/sde, скопируем данные, \
+а потом попробуем пересоздать xfs
+
+- Делаем mirror на /dev/sdb/ и /dev/sde
+
+```
+# /dev/sdd /dev/sde
+MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
+# создаём RAID
+sudo pvcreate $MIRRORDISKS
+sudo vgcreate vg0 $MIRRORDISKS
+sudo lvcreate -l+80%FREE -m1 -n mirror vg0
+sudo lvs
+```
+
+![05](./screenshots/05.png)
+
+```
+# монтируем:
+mkdir /home/vagrant/mirror
+sudo mkfs.xfs /dev/vg0/mirror
+sudo mount /dev/vg0/mirror /home/vagrant/mirror/
+sudo chown -R vagrant:vagrant /home/vagrant/mirror/
+# копируем:
+cp -aR /home/vagrant/data/* /home/vagrant/mirror/
+```
+- Уменьшаем LV /dev/otus/test:
 
 ```
 # уменьшаем /dev/otus/test
 sudo umount /dev/otus/test
-sudo e2fsck -fy /dev/otus/test
-sudo resize2fs /dev/otus/test 10G
+# удаляем xfs
+sudo fdisk /dev/otus/test
+```
+
+![06](./screenshots/06.png)
+
+xfs будет удалена после ввода w, поэтому вводим w
+
+```
+Command (m for help): w
 sudo lvreduce -y /dev/otus/test -L 10G
+sudo mkfs.xfs -f /dev/otus/test 
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
 ```
+копируем обратно с массива
+
+```
+cp -aR /home/vagrant/mirror/* /home/vagrant/data/
+sudo rm -rf /home/vagrant/mirror/*
+```
+
+Файл на месте
+
+![07](./screenshots/07.png)
+
+-Создание снапшота
 
 ```
 #создаём снапшот
