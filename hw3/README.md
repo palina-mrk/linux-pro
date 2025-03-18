@@ -32,7 +32,8 @@
  
 ```
 sudo lsblk
-``` 
+```
+
 ![01](./screenshots/01.png)
 
 ```
@@ -41,11 +42,12 @@ sudo yum install -y lvm2
 sudo lvmdiskscan
 
 ``` 
+
 ![02](./screenshots/02.png)
 
-```
 - Создаем LVG с двумя разделами
 
+```
 # определяем переменную BASEDISK = /dev/sdb
 BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
 # создаём LVG otus на устройстве /dev/sdb
@@ -59,10 +61,10 @@ sudo mkfs.xfs /dev/otus/test
 mkdir /home/vagrant/data
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
+```
 
-``` 
-Проверяем, что всё верно: смотрим информацию о volume groups, \
-physical volumes и logical volumes:
+Проверяем, что всё верно: смотрим информацию о ```volume groups```, \
+```physical volumes``` и ```logical volumes```:
 
 ```
 sudo vgdisplay  | grep -i ' name'
@@ -85,6 +87,60 @@ dd if=/dev/random of=/home/vagrant/data/test.log \
     bs=1M count=8000 status=progress
 ```
 
+
+```
+# расширяем том /dev/otus/test
+sudo lvextend -l+80%FREE /dev/otus/test
+sudo resize2fs /dev/otus/test
+```
+
+
+```
+# уменьшаем /dev/otus/test
+sudo umount /dev/otus/test
+sudo e2fsck -fy /dev/otus/test
+sudo resize2fs /dev/otus/test 10G
+sudo lvreduce -y /dev/otus/test -L 10G
+sudo mount /dev/otus/test /home/vagrant/data/
+sudo chown -R vagrant:vagrant /home/vagrant/data
+```
+
+```
+#создаём снапшот
+sudo lvcreate -L 500M -s -n test-snap /dev/otus/test
+# монтируем и размонтируем снапшот
+mkdir /home/vagrant/data-snap
+sudo mount /dev/otus/test-snap /home/vagrant/data-snap/
+sudo chown -R vagrant:vagrant /home/vagrant/data-snap
+sudo umount /home/vagrant/data-snap
+```
+
+```
+# восстанавливаемся со снапшота
+sudo umount /home/vagrant/data
+sudo lvconvert --merge /dev/otus/test-snap
+sudo mount /dev/otus/test /home/vagrant/data
+sudo chown -R vagrant:vagrant /home/vagrant/data-snap
+
+```
+
+```
+# /dev/sdd /dev/sde
+MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
+# создаём RAID
+sudo pvcreate $MIRRORDISKS
+sudo vgcreate vg0 $MIRRORDISKS
+sudo lvcreate -l+80%FREE -m1 -n mirror vg0
+```
+
+***после перезагрузки***
+
+```
+# удаляем lvs
+sudo umount /home/vagrant/data
+sudo vgremove -f vg0
+sudo vgremove -f otus
+```
 
 
 ## 2. Обновляем ядро OC на более новую поддерживаемую весию (Almalinux 8.0)
