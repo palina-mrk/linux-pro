@@ -261,8 +261,7 @@ sudo sed -i 's/rl_rocky8-root/vg_root-lv_root/g' /etc/fstab
 sudo rsync -avxHAX --progress /boot/ /mnt/boot/
 sudo yum install -y dracut*
 sudo systemctl daemon-reload
-for i in $( sudo ls / ) ; \
-    do
+for i in $( sudo ls / ) ; do \
     if [ $i != mnt ] ; then
     sudo mount --bind /$i/ /mnt/$i/ ;
     fi;
