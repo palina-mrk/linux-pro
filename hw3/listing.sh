@@ -3,7 +3,7 @@
 # смотрим ситуацию с дисками:
 sudo lsblk
 # устанавливаем необходимый пакет
-sudo yum install -y lvm2
+sudo apt install -y lvm2
 sudo lvmdiskscan
 
 # определяем переменную BASEDISK = /dev/sdb
@@ -14,8 +14,8 @@ sudo vgcreate otus $BASEDISK
 # создаем 2 лог. раздела: /dev/otus/test и /dev/otus/small
 sudo lvcreate -l+80%FREE -n test otus
 sudo lvcreate -L100M -n small otus
-# создаём ФС xfs на /dev/otus/test и монтируем в ~/data/
-sudo mkfs.xfs /dev/otus/test
+# создаём ФС ext4 на /dev/otus/test и монтируем в ~/data/
+sudo mkfs.ext4 /dev/otus/test
 mkdir /home/vagrant/data
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
@@ -52,7 +52,6 @@ sudo umount /home/vagrant/data
 sudo lvconvert --merge /dev/otus/test-snap
 sudo mount /dev/otus/test /home/vagrant/data
 sudo chown -R vagrant:vagrant /home/vagrant/data-snap
-#!/bin/bash
 
 # /dev/sdd /dev/sde
 MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
@@ -63,10 +62,11 @@ sudo lvcreate -l+80%FREE -m1 -n mirror vg0
 
 # удаляем lvs
 sudo umount /home/vagrant/data
+
 sudo vgremove -f vg0
 sudo vgremove -f otus
 
-# /dev/sdb
+# определяем переменную BASEDISK=/dev/sdb
 BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
 # создаём LVG на устройстве /dev/sdb
 sudo pvcreate $BASEDISK
@@ -82,6 +82,7 @@ sudo rsync -avxHAX --progress / /mnt/
 # конфигурируем новый grub
 for i in /proc/ /sys/ /dev/ /run/ /boot/; \
     do sudo  mount --bind $i /mnt/$i; done
+sudo mount --bind /boot/ /mnt/boot
 sudo chroot /mnt/
 # теперь user сменился на root
 grub-mkconfig -o /boot/grub/grub.cfg
