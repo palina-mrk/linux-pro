@@ -262,15 +262,22 @@ sudo rsync -avxHAX --progress / /mnt/
 for i in /proc/ /sys/ /dev/ /run/ /boot/; \
  do sudo mount --rbind $i /mnt/$i; done
 sudo chroot /mnt/
-LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
-sudo umount /dev/$LVG/root
-
-sudo sed -i 's/rl_rocky8-root/vg_root-lv_root/g' /etc/fstab
-sudo yum install -y dracut*
-sudo systemctl daemon-reload
-#sudo chroot /mnt/
 grub2-mkconfig -o /boot/grub2/grub.cfg
-
+```
+команда выдаёт ошибку, что одно из устройств не найдено, \
+но отрабатывает ( ```echo $?``` возвращает 0 )
 
 ```
+sudo yum install -y dracut
+
+```
+cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-$(date +%m-%d-%H%M%S).img
+dracut -f /boot/initramfs-$(uname -r).img $(uname -r)
+exit
+sudo systemctl reboot
+```
+Перезагружаемся.
+
+```
+vagrant halt; vagrant up
 ```
