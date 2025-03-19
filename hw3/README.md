@@ -264,18 +264,18 @@ for i in /proc/ /sys/ /dev/ /run/ /boot/; \
 sudo chroot /mnt/
 grub2-mkconfig -o /boot/grub2/grub.cfg
 ```
+
 команда выдаёт ошибку, что одно из устройств не найдено, \
 но отрабатывает ( ```echo $?``` возвращает 0 )
 
 ```
 sudo yum install -y dracut
-
-```
 cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-$(date +%m-%d-%H%M%S).img
 dracut -f /boot/initramfs-$(uname -r).img $(uname -r)
 exit
 sudo systemctl reboot
 ```
+
 Перезагружаемся.
 
 ```
