@@ -242,7 +242,9 @@ sudo vgremove -f otus
 BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
 # создаём LVG на устройстве /dev/sdb
 sudo pvcreate $BASEDISK
-sudo vgcreate vg_root $BASEDISK
+# находим имя LVG с рутом
+LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+sudo vgextend $LVG $BASEDISK
 # создаём volume для рута на весь раздел
 sudo lvcreate -n lv_root -l+100%FREE -y vg_root
 # создаём ФС xfs на разделе
