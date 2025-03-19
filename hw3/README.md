@@ -257,5 +257,13 @@ sudo mount /dev/vg_root/lv_root /mnt/
 
 ```
 sudo rsync -avxHAX --progress / /mnt/
+for i in /proc/ /sys/ /dev/ /run/ /boot/; \
+    do sudo  mount --bind $i /mnt/$i; done
+sudo mount --bind /boot/ /mnt/boot
+sudo chroot /mnt/
+sed -i 's/rl_rocky8-root/vg_root-lv_root/g' /etc/fstab
+grub2-mkconfig -o /boot/grub2/grub.cfg
+
+
 ```
 ```
