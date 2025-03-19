@@ -245,12 +245,12 @@ sudo pvcreate $BASEDISK
 # находим имя LVG с рутом
 LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
 sudo vgextend $LVG $BASEDISK
-# создаём volume для рута на весь раздел
-sudo lvcreate -n lv_root -l+100%FREE -y vg_root
+# создаём volume для рута на добавленном физ. томе
+sudo lvcreate -L9G -n myroot $LVG $BASEDISK
 # создаём ФС xfs на разделе
-sudo mkfs.xfs /dev/vg_root/lv_root
+sudo mkfs.xfs /dev/$LVG/myroot
 # монтируем полученный раздел и копируем туда рута
-sudo mount /dev/vg_root/lv_root /mnt/
+sudo mount /dev/$LVG/myroot /mnt/
 ```
 
 > [vagrant@rocky ~]$ sudo mount /dev/vg_root/lv_root /mnt/
@@ -259,15 +259,15 @@ sudo mount /dev/vg_root/lv_root /mnt/
 
 ```
 sudo rsync -avxHAX --progress / /mnt/
+for i in /proc/ /sys/ /dev/ /run/ /boot/; \
+ do sudo mount --rbind $i /mnt/$i; done
+sudo chroot /mnt/
+LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+sudo umount /dev/$LVG/root
+
 sudo sed -i 's/rl_rocky8-root/vg_root-lv_root/g' /etc/fstab
-sudo rsync -avxHAX --progress /boot/ /mnt/boot/
 sudo yum install -y dracut*
 sudo systemctl daemon-reload
-for i in $( sudo ls / ) ; do \
-    if [ $i != mnt ] ; then
-    sudo mount --bind /$i/ /mnt/$i/ ;
-    fi;
-done
 #sudo chroot /mnt/
 grub2-mkconfig -o /boot/grub2/grub.cfg
 
