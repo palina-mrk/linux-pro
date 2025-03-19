@@ -134,19 +134,10 @@ cp -aR /home/vagrant/data/* /home/vagrant/mirror/
 - Уменьшаем LV /dev/otus/test:
 
 ```
-# уменьшаем /dev/otus/test
+# уменьшаем логический том /dev/otus/test
 sudo umount /dev/otus/test
-# удаляем xfs
-sudo fdisk /dev/otus/test
-```
-
-![06](./screenshots/06.png)
-
-xfs будет удалена после ввода w, поэтому вводим w
-
-```
-Command (m for help): w
 sudo lvreduce -y /dev/otus/test -L 1G
+# пересоздаём файловую систему
 sudo mkfs.xfs -f /dev/otus/test 
 sudo mount /dev/otus/test /home/vagrant/data/
 sudo chown -R vagrant:vagrant /home/vagrant/data
@@ -213,17 +204,58 @@ done
 sudo cp /home/vagrant/data/file.tmp /etc/fstab
 exit
 ```
+При перезагрузке VM зависает, поэтому выходим и перезагружаем принудителььно: \
+
+```
+vagrant halt
+vagrant up
+vagrant ssh
+```
 
 ***после перезагрузки***
 
+убеждаемся, что точки монтирования сохранились:
+
 ```
+sudo df -h
+```
+
+![12](./screenshots/12.png)
+
+## 2. Изменение корневого раздела - подготовка.
+
+Сначала восстанавливаем чистую систему: удаляем LVG, \
+восстанавливаем исходный /etc/fstab
+
+```
+sudo mv /etc/fstab.bkp /etc/fstab
 # удаляем lvs
-sudo umount /home/vagrant/data
+sudo umount /home/vagrant/*
 sudo vgremove -f vg0
 sudo vgremove -f otus
 ```
 
+Создаём LVG на /dev/sdb и копируем туда рута:
 
-## 2. Изменение корневого раздела.
+```
+# определяем переменную BASEDISK=/dev/sdb
+BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
+# создаём LVG на устройстве /dev/sdb
+sudo pvcreate $BASEDISK
+sudo vgcreate vg_root $BASEDISK
+# создаём volume для рута на весь раздел
+sudo lvcreate -n lv_root -l+100%FREE -y vg_root
+# создаём ФС xfs на разделе
+sudo mkfs.xfs /dev/vg_root/lv_root
+# монтируем полученный раздел и копируем туда рута
+sudo mount /dev/vg_root/lv_root /mnt/
+```
 
+> [vagrant@rocky ~]$ sudo mount /dev/vg_root/lv_root /mnt/
+> mount: (hint) your fstab has been modified, but systemd still uses
+>       the old version; use 'systemctl daemon-reload' to reload.
 
+```
+sudo rsync -avxHAX --progress / /mnt/
+```
+```
