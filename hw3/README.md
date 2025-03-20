@@ -222,7 +222,7 @@ sudo df -h
 
 ![12](./screenshots/12.png)
 
-## 2. Изменение корневого раздела - подготовка.
+## 2a. Изменение корневого раздела - подготовка.
 
 ***c rockylinux не получилось обновить загрузчик, поэтому ***
 ***беру чистую ubuntu24 и делаю дальнейшие задания на ней***
@@ -279,14 +279,12 @@ exit
 reboot
 ```
 
-![17](./screenshots/17.png)
-
 Ждём, пока перезагрузится, и заходим
 
 ```
 vagrant ssh
 ```
-## 3. Изменение корневого раздела - продолжение
+## 2b. Изменение корневого раздела - продолжение
 
 После перезагрузки:
 
@@ -308,4 +306,55 @@ sudo rsync -avxHAX --progress / /mnt/
 sudo -i
 for i in /proc/ /sys/ /dev/ /run/ /boot/; \
     do sudo  mount --bind $i /mnt/$i; done
+ls /mnt/
+ls /mnt/boot/
 ```
+
+![19](./screenshots/19.png)
+
+```
+chroot /mnt/
+grub-mkconfig -o /boot/grub/grub.cfg
+update-initramfs -u
+```
+
+![20](./screenshots/20.png)
+
+Выходим и перезагружаемся
+
+```
+exit
+reboot
+```
+
+Ждём, пока перезагрузится, и заходим
+
+```
+vagrant ssh
+```
+### 2c. Изменение корневого раздела - окончание
+
+
+
+## 3. Создание раздела под var на mirror
+
+Перед тем, как перезагружаться, создадим mirror и раздел под var
+
+```
+MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
+LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+
+pvcreate $MIRRORDISKS
+vgcreate vg_var $MIRRORDISKS
+lvcreate -L 950M -m1 -n lv_var vg_var
+mkfs.ext4 /dev/vg_var/lv_var
+mount /dev/vg_var/lv_var  /mnt/
+cp -aR /var/* /mnt/
+mkdir /tmp/oldvar && mv /var/* /tmp/oldvar
+umount /mnt/
+mount /dev/vg_var/lv_var /var
+echo "`blkid | grep var: | awk '{print $2}'` \
+      /var ext4 defaults 0 0" >> /etc/fstab
+exit 
+sudo reboot
+
