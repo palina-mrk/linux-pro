@@ -224,18 +224,16 @@ sudo df -h
 
 ## 2. Изменение корневого раздела - подготовка.
 
-Сначала восстанавливаем чистую систему: удаляем LVG, \
-восстанавливаем исходный /etc/fstab
+***c rockylinux не получилось обновить загрузчик, поэтому ***
+***беру чистую ubuntu24 и делаю дальнейшие задания на ней***
 
 ```
-sudo mv /etc/fstab.bkp /etc/fstab
-# удаляем lvs
-sudo umount /home/vagrant/*
-sudo vgremove -f vg0
-sudo vgremove -f otus
+sudo lsblk
 ```
 
-Создаём LVG на /dev/sdb и копируем туда рута:
+![13](./screenshots/13.png)
+
+Продолжаем существующую по умолчанию LVG на /dev/sdb и копируем туда рута:
 
 ```
 # определяем переменную BASEDISK=/dev/sdb
@@ -247,37 +245,67 @@ LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
 sudo vgextend $LVG $BASEDISK
 # создаём volume для рута на добавленном физ. томе
 sudo lvcreate -L9G -n myroot $LVG $BASEDISK
-# создаём ФС xfs на разделе
-sudo mkfs.xfs /dev/$LVG/myroot
+# создаём ФС ext4 на разделе
+sudo mkfs.ext4 /dev/$LVG/myroot
 # монтируем полученный раздел и копируем туда рута
 sudo mount /dev/$LVG/myroot /mnt/
 ```
+![14](./screenshots/14.png)
 
-> [vagrant@rocky ~]$ sudo mount /dev/vg_root/lv_root /mnt/
-> mount: (hint) your fstab has been modified, but systemd still uses
->       the old version; use 'systemctl daemon-reload' to reload.
+Игнорируем предложение ```systemctl daemon-reload``` ! \
+Иначе ничего не получится
 
 ```
 sudo rsync -avxHAX --progress / /mnt/
+sudo -i
 for i in /proc/ /sys/ /dev/ /run/ /boot/; \
- do sudo mount --rbind $i /mnt/$i; done
-sudo chroot /mnt/
-grub2-mkconfig -o /boot/grub2/grub.cfg
+ do mount --bind $i /mnt/$i; done
+ls /mnt/
+ls /mnt/boot/
 ```
 
-команда выдаёт ошибку, что одно из устройств не найдено, \
-но отрабатывает ( ```echo $?``` возвращает 0 )
+![15](./screenshots/15.png)
 
 ```
-sudo yum install -y dracut
-cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-$(date +%m-%d-%H%M%S).img
-dracut -f /boot/initramfs-$(uname -r).img $(uname -r)
+chroot /mnt/
+grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+![16](./screenshots/16.png)
+
+```
+update-initramfs -u
 exit
-sudo systemctl reboot
+reboot
 ```
 
-Перезагружаемся.
+![17](./screenshots/17.png)
+
+Ждём, пока перезагрузится, и заходим
 
 ```
-vagrant halt; vagrant up
+vagrant ssh
+```
+## 3. Изменение корневого раздела - продолжение
+
+После перезагрузки:
+
+```
+sudo lsblk
+```
+
+![18](./screenshots/18.png)
+
+Изменяем старый LV.
+Затем возвращаем на него root по предыдущему алгоритму:
+
+```
+sudo lvremove -y /dev/ubuntu-vg/ubuntu-lv
+sudo lvcreate -n ubuntu-lv -L8G /dev/ubuntu-vg -y
+sudo mkfs.ext4 /dev/ubuntu-vg/ubuntu-lv
+sudo mount /dev/ubuntu-vg/ubuntu-lv /mnt/
+sudo rsync -avxHAX --progress / /mnt/
+sudo -i
+for i in /proc/ /sys/ /dev/ /run/ /boot/; \
+    do sudo  mount --bind $i /mnt/$i; done
 ```
