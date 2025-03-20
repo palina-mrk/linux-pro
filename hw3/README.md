@@ -334,7 +334,23 @@ vagrant ssh
 ```
 ### 2c. Изменение корневого раздела - окончание
 
+```
+sudo lsblk
+```
 
+Видим, что корневой раздел теперь занимает 8G.
+
+![21](./screenshots/21.png)
+
+Удаляем LV myroot и PV /dev/sdb из LVG
+
+```
+LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
+sudo lvremove -y /dev/$LVG/myroot
+sudo vgreduce $LVG $BASEDISK
+sudo pvremove $BASEDISK
+```
 
 ## 3. Создание раздела под var на mirror
 
