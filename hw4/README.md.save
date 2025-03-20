@@ -13,11 +13,11 @@
   2. Определить настройки пула:
   - с помощью команды zfs import собрать pool ZFS.
   - командами zfs определить настройки:
-  - *размер хранилища;
-  - *тип pool;
-  - *значение recordsize;
-  - *какое сжатие используется;
-  - *какая контрольная сумма используется.
+  -* размер хранилища;
+  -* тип pool;
+  -* значение recordsize;
+  -* какое сжатие используется;
+  -* какая контрольная сумма используется.
   3. Работа со снапшотами:
   - скопировать файл из удаленной директории;
   - снять снапшот;
@@ -31,67 +31,95 @@
 ```
 sudo lsblk
 ```
+
 ![01](./screenshots/01.png)
 
 Устанавливаем необходимый пакет
 
 ```
-sudo apt install -y zfsutils-linux
+sudo yum install -y lvm2
+sudo lvmdiskscan
 ``` 
-
-Определяем переменные
-
-```
-MIR1=$( sudo lsblk | grep disk | grep 512M | awk '{print $1}' | head -2 )
-MIR2=$( sudo lsblk | grep disk | grep 512M | awk '{print $1}' | head -4 | tail -2 )
-MIR3=$( sudo lsblk | grep disk | grep 512M | awk '{print $1}' | head -6 | tail -2 )
-MIR4=$( sudo lsblk | grep disk | grep 512M | awk '{print $1}' | head -8 | tail -2 )
-```
-
-Создаём 4 пула
-
-```
-sudo zpool create otus1 mirror $MIR1
-sudo zpool create otus2 mirror $MIR2
-sudo zpool create otus3 mirror $MIR3
-sudo zpool create otus4 mirror $MIR4
-sudo lsblk
-```
 
 ![02](./screenshots/02.png)
 
-добавляем алгоритмы сжатия в каждый массив
+- Создаем LVG с двумя разделами
 
 ```
-sudo zfs set compression=lzjb otus1
-sudo zfs set compression=lz4 otus2
-sudo zfs set compression=gzip-9 otus3
-sudo zfs set compression=zle otus4
-sudo zfs get all | grep compression
+# определяем переменную BASEDISK = /dev/sdb
+BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
+# создаём LVG otus на устройстве /dev/sdb
+sudo pvcreate $BASEDISK
+sudo vgcreate otus $BASEDISK
+# создаем 2 лог. раздела: /dev/otus/test и /dev/otus/small
+sudo lvcreate -l+80%FREE -n test otus
+sudo lvcreate -L100M -n small otus
+# создаём ФС xfs на /dev/otus/test и монтируем в ~/data/
+sudo mkfs.xfs /dev/otus/test
+mkdir /home/vagrant/data
+sudo mount /dev/otus/test /home/vagrant/data/
+sudo chown -R vagrant:vagrant /home/vagrant/data
+# создаём ФС xfs на /dev/otus/small и монтируем в ~/data/
+sudo mkfs.xfs /dev/otus/small
+mkdir /home/vagrant/and
+sudo mount /dev/otus/small /home/vagrant/and/
+sudo chown -R vagrant:vagrant /home/vagrant/and
+```
+
+Проверяем, что всё верно: смотрим информацию о ```volume groups```, \
+```physical volumes``` и ```logical volumes```:
+
+```
+sudo vgdisplay  | grep -i ' name'
+sudo vgdisplay -v | grep -i 'pv name'
+sudo vgdisplay -v | grep -i 'lv name'
 ```
 
 ![03](./screenshots/03.png)
 
-Скачиваем файл
+- Расширим LV ```/dev/otus/test``` за счет добавления диска в LVM
 
 ```
-for i in {1..4}; do sudo wget -P /otus$i \
-    https://gutenberg.org/cache/epub/2600/pg2600.converter.log; done
-sudo ls -l /otus*
+#  определяем переменную SNAPDISK = /dev/sdc
+SNAPDISK=$(sudo lsblk | grep 2G | grep disk | awk '{print "/dev/"$1}' )
+# расширяем LVG за счёт /dev/sdc
+sudo pvcreate $SNAPDISK
+sudo vgextend otus $SNAPDISK
+# занимаем всё место на /dev/otus/small и /dev/otus/and
+dd if=/dev/random of=/home/vagrant/data/test.log \
+    bs=1M count=8000 status=progress
+dd if=/dev/random of=/home/vagrant/and/test.log \
+    bs=1M count=8000 status=progress
 ```
+
+К сожалению, команда ```dd``` не заполнила полностью ни один из разделов:
 
 ![04](./screenshots/04.png)
 
-Просматриваем занятое место
+```
+# расширяем том /dev/otus/test
+sudo lvextend -l+80%FREE /dev/otus/test
+sudo xfs_growfs /dev/otus/test
+```
+
+Теперь нужно уменьшить раздел ```/dev/otus/test```. \
+Но xfs не умеет уменьшаться, поэтому сначала создадим mirror \
+на /dev/sdb/ и /dev/sde, скопируем данные, \
+а потом попробуем пересоздать xfs
+
+- Делаем mirror на /dev/sdb/ и /dev/sde
 
 ```
-sudo zfs list
-sudo zfs get all | grep compressratio | grep -v ref
+# /dev/sdd /dev/sde
+MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
+# создаём RAID
+sudo pvcreate $MIRRORDISKS
+sudo vgcreate vg0 $MIRRORDISKS
+sudo lvcreate -l+80%FREE -m1 -n mirror vg0
+sudo lvs
 ```
 
 ![05](./screenshots/05.png)
-
-Делаем вывод, что gzip-9 - самый эффективный алгоритм сжатия
 
 ```
 # монтируем:
