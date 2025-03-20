@@ -352,24 +352,44 @@ sudo vgreduce $LVG $BASEDISK
 sudo pvremove $BASEDISK
 ```
 
-## 3. Создание раздела под var на mirror
+## 3a. Создание раздела под var на raid1
 
-Перед тем, как перезагружаться, создадим mirror и раздел под var
+Создаём raid1 на /dev/sdd и /dev/sde
 
 ```
 MIRRORDISKS=$(sudo lsblk | grep 1G | grep disk | awk '{print "/dev/"$1}')
-LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+echo $MIRRORDISKS | xargs sudo mdadm --zero-superblock --force
+RAID1='/dev/md1'
+echo $MIRRORDISKS | xargs sudo mdadm --create --verbose --metadata=0.90 $RAID1 -l 1 -n 2
+```
 
-pvcreate $MIRRORDISKS
-vgcreate vg_var $MIRRORDISKS
-lvcreate -L 950M -m1 -n lv_var vg_var
-mkfs.ext4 /dev/vg_var/lv_var
-mount /dev/vg_var/lv_var  /mnt/
-cp -aR /var/* /mnt/
-mkdir /tmp/oldvar && mv /var/* /tmp/oldvar
-umount /mnt/
-mount /dev/vg_var/lv_var /var
-echo "`blkid | grep var: | awk '{print $2}'` \
+![22](./screenshots/22.png)
+
+Добавляем созданный массив в LVG, \
+создаём на нём logical volume и монтируем в /mnt/, \
+чтобы перенести туда содержимое /var
+
+```
+sudo pvcreate $RAID1
+sudo vgextend $LVG $RAID1
+sudo lvcreate -L+100%FREE -n myvar $LVG $RAID1
+sudo mkfs.ext4 /dev/$LVG/myvar
+sudo mount /dev/$LVG/myvar  /mnt/
+sudo cp -aR /var/* /mnt/
+sudo mkdir /tmp/oldvar && sudo mv /var/* /tmp/oldvar
+sudo umount /mnt/
+sudo mount /dev/$LVG/myvar /var
+sudo lsblk
+```
+
+![23](./screenshots/23.png)
+
+Записываем изменения в /etc/fstab
+
+```
+touch ~/file.tmp
+sudo cat /etc/fstab >> ~/file.tmp
+echo "`sudo blkid | grep var: | awk '{print $2}'` \
       /var ext4 defaults 0 0" >> /etc/fstab
 exit 
 sudo reboot
