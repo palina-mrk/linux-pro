@@ -403,3 +403,85 @@ echo "DEVICE partitions" > file.tmp
 sudo mdadm --detail --scan --verbose | sudo awk '/ARRAY/{print}' >> file.tmp
 sudo cp file.tmp /etc/mdadm/mdadm.conf
 ```
+
+## 3b. Создание раздела под home
+
+создаём том под home
+
+```
+sudo lvcreate -n myhome -L2G /dev/$LVG
+sudo mkfs.ext4 /dev/$LVG/myhome
+sudo mount /dev/$LVG/myhome /mnt/
+sudo cp -aR /home/* /mnt/
+sudo rm -rf /home/*
+sudo umount /mnt
+sudo mount /dev/$LVG/myhome /home/
+sudo chown -R vagrant:vagrant /home/vagrant
+```
+записываем изменения в /etc/fstab
+
+```
+cd ..
+cd /home/vagrant
+touch file.tmp
+sudo cat /etc/fstab >> file.tmp
+echo "$( sudo blkid | grep -i home | awk '{print $2}' ) \
+      /home ext4 defaults 0 0" >> file.tmp
+sudo cp file.tmp /etc/fstab
+sudo rm file.tmp
+df -Th
+```
+
+![24](./screenshots/24.png)
+
+перезагружаемся, чтобы убедиться, что все изменения сохранятся
+
+```
+sudo reboot
+vagrant ssh
+sudo lsblk
+sudo df -h
+```
+
+![25](./screenshots/25.png)
+
+точки монтирования и raid1 сохранились
+
+## 4. Работа со снапшотами
+
+создаём доп. файлы в home
+
+```
+touch /home/vagrant/file{1..20}
+ls /home/vagrant/ 
+```
+
+![26](./screenshots/26.png)
+
+создаём снапшот
+
+```
+LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
+sudo lvcreate -L 100M -s -n home-snap /dev/$LVG/myhome
+```
+
+удаляем файлы и восстанавливаемся со снапшота
+
+```
+rm -f /home/vagrant/file{1..20}
+ls /home/vagrant/
+```
+
+![27](./screenshots/27.png)
+
+```
+cd /
+sudo umount /home
+sudo lvconvert --merge /dev/$LVG/home-snap
+sudo mount /dev/$LVG/myhome /home
+ls /home/vagrant/
+```
+
+![28](./screenshots/28.png)
+
+Файлы восстановлены
