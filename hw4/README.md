@@ -93,162 +93,55 @@ sudo zfs get all | grep compressratio | grep -v ref
 
 Делаем вывод, что gzip-9 - самый эффективный алгоритм сжатия
 
-```
-# монтируем:
-mkdir /home/vagrant/mirror
-sudo mkfs.xfs /dev/vg0/mirror
-sudo mount /dev/vg0/mirror /home/vagrant/mirror/
-sudo chown -R vagrant:vagrant /home/vagrant/mirror/
-# копируем:
-cp -aR /home/vagrant/data/* /home/vagrant/mirror/
-```
-- Уменьшаем LV /dev/otus/test:
+## 2. Определение настроек пула.
+
+Скачиваем архив в домашний каталог, разархивируем и пытаемся \
+импортировать полученный каталог в пул. Не получается:
 
 ```
-# уменьшаем логический том /dev/otus/test
-sudo umount /dev/otus/test
-sudo lvreduce -y /dev/otus/test -L 1G
-# пересоздаём файловую систему
-sudo mkfs.xfs -f /dev/otus/test 
-sudo mount /dev/otus/test /home/vagrant/data/
-sudo chown -R vagrant:vagrant /home/vagrant/data
-```
-копируем обратно с массива
-
-```
-cp -aR /home/vagrant/mirror/* /home/vagrant/data/
-sudo rm -rf /home/vagrant/mirror/*
+cd
+wget -O archive.tar.gz --no-check-certificate 'https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download'
+tar -xzvf archive.tar.gz
+sudo zpool import -d zpoolexport/
 ```
 
-Файл на месте
+![06](./screenshots/06.png)
+
+```
+sudo zpool import -d zpoolexport/ otus
+sudo zpool status
+```
 
 ![07](./screenshots/07.png)
 
-- Создание снапшота
+Таким обазом, мы импортировали пул с именем ```otus```. \
+Определяем его настройки:
 
 ```
-#создаём снапшот
-sudo lvcreate -L100m -s -n test-snap /dev/otus/test
-sudo mount -o nouuid,ro /dev/otus/test-snap /home/vagrant/data-snap
-sudo lvs
+# определение всех настроекЖ
+sudo zfs get all otus
+# определение конкретных настроек:
+sudo zfs get readonly otus
+sudo zfs get recordsize otus
+sudo zfs get compression otus
+sudo zfs get checksum otus
 ```
 
 ![08](./screenshots/08.png)
 
-Создаём файлы в /dev/otus/data
+## 3. Работа со снапшотами 
+
+Скачиваем архив в домашний каталог, разархивируем и  \
+восстанавливаем файловую систему из снапшота. \
+Затем ищем в каталоге ~/otus/test файл с именем ```secret message``` \
+и выводим на экран содержимое этого файла:
 
 ```
-touch /home/vagrant/data/file{1,2,3,4,5}
-dd if=/dev/random of=/home/vagrant/data/file1 bs=1M count=70
-sudo lvs
+cd
+wget -O otus_task2.file --no-check-certificate https://drive.usercontent.google.com/download?id=1wgxjih8YZ-cqLqaZVa0lA3h3Y029c3oI&export=download
+sudo zfs receive otus/test@today < otus_task2.file
+SECR=$( sudo find /otus/test -name "secret_message")
+cat $SECR 
 ```
 
 ![09](./screenshots/09.png)
-
-Поле "Data" в строке снэпшота изменилось.
-
-```
-# восстанавливаемся со снапшота
-sudo umount /home/vagrant/data-snap
-sudo umount /home/vagrant/data
-sudo lvconvert --merge /dev/otus/test-snap
-sudo mount /dev/otus/test /home/vagrant/data
-sudo chown -R vagrant:vagrant /home/vagrant/data-snap
-```
-Восстановление прошло успешно.
-
-![10](./screenshots/10.png)
-
-Записываем точки монтирования в fstab, но перед этим делаем копию \
-etc/fstab для восстановления чистой системы перед следующим упражнением.
-
-```
-sudo cp /etc/fstab /etc/fstab.bkp
-touch /home/vagrant/data/file.tmp
-sudo cat /etc/fstab > /home/vagrant/data/file.tmp
-for i in otus-test vg0-mirror otus-small ;
-do
-      echo "$( sudo blkid | grep "\/dev\/mapper\/$i:"  | awk '{print $2}' ) \
-      $( df -h | grep "\/dev\/mapper\/$i" | awk '{print $6}' ) \
-      xfs defaults 0 0" >> /home/vagrant/data/file.tmp;
-done
-sudo cp /home/vagrant/data/file.tmp /etc/fstab
-exit
-```
-При перезагрузке VM зависает, поэтому выходим и перезагружаем принудителььно: \
-
-```
-vagrant halt
-vagrant up
-vagrant ssh
-```
-
-***после перезагрузки***
-
-убеждаемся, что точки монтирования сохранились:
-
-```
-sudo df -h
-```
-
-![12](./screenshots/12.png)
-
-## 2. Изменение корневого раздела - подготовка.
-
-Сначала восстанавливаем чистую систему: удаляем LVG, \
-восстанавливаем исходный /etc/fstab
-
-```
-sudo mv /etc/fstab.bkp /etc/fstab
-# удаляем lvs
-sudo umount /home/vagrant/*
-sudo vgremove -f vg0
-sudo vgremove -f otus
-```
-
-Создаём LVG на /dev/sdb и копируем туда рута:
-
-```
-# определяем переменную BASEDISK=/dev/sdb
-BASEDISK=$(sudo lsblk | grep 10G | grep disk | awk '{print "/dev/"$1}')
-# создаём LVG на устройстве /dev/sdb
-sudo pvcreate $BASEDISK
-# находим имя LVG с рутом
-LVG=$( sudo vgs | awk '{print $1}' | tail -1 )
-sudo vgextend $LVG $BASEDISK
-# создаём volume для рута на добавленном физ. томе
-sudo lvcreate -L9G -n myroot $LVG $BASEDISK
-# создаём ФС xfs на разделе
-sudo mkfs.xfs /dev/$LVG/myroot
-# монтируем полученный раздел и копируем туда рута
-sudo mount /dev/$LVG/myroot /mnt/
-```
-
-> [vagrant@rocky ~]$ sudo mount /dev/vg_root/lv_root /mnt/
-> mount: (hint) your fstab has been modified, but systemd still uses
->       the old version; use 'systemctl daemon-reload' to reload.
-
-```
-sudo rsync -avxHAX --progress / /mnt/
-for i in /proc/ /sys/ /dev/ /run/ /boot/; \
- do sudo mount --rbind $i /mnt/$i; done
-sudo chroot /mnt/
-grub2-mkconfig -o /boot/grub2/grub.cfg
-```
-
-команда выдаёт ошибку, что одно из устройств не найдено, \
-но отрабатывает ( ```echo $?``` возвращает 0 )
-
-```
-sudo yum install -y dracut
-cp /boot/initramfs-$(uname -r).img /boot/initramfs-$(uname -r)-$(date +%m-%d-%H%M%S).img
-dracut -f /boot/initramfs-$(uname -r).img $(uname -r)
-exit
-sudo systemctl reboot
-```
-
-Перезагружаемся.
-
-```
-vagrant halt; vagrant up
-```
