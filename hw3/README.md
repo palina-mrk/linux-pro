@@ -251,7 +251,6 @@ sudo mkfs.ext4 /dev/$LVG/myroot
 # монтируем полученный раздел и копируем туда рута
 sudo mount /dev/$LVG/myroot /mnt/
 ```
-![14](./screenshots/14.png)
 
 Игнорируем предложение ```systemctl daemon-reload``` ! \
 Иначе ничего не получится
