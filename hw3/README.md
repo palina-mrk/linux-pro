@@ -389,8 +389,17 @@ sudo lsblk
 ```
 touch ~/file.tmp
 sudo cat /etc/fstab >> ~/file.tmp
-echo "`sudo blkid | grep var: | awk '{print $2}'` \
-      /var ext4 defaults 0 0" >> /etc/fstab
-exit 
-sudo reboot
+echo "$(sudo blkid | grep var: | awk '{print $2}') \
+      /var ext4 defaults 0 0" >> ~/file.tmp
+sudo cp ~/file.tmp /etc/fstab
+```
 
+Записываем изменения в /etc/mdadm/mdadm.conf
+
+```
+rm ~/file.tmp
+touch ~/file.tmp
+echo "DEVICE partitions" > file.tmp
+sudo mdadm --detail --scan --verbose | sudo awk '/ARRAY/{print}' >> file.tmp
+sudo cp file.tmp /etc/mdadm/mdadm.conf
+```
