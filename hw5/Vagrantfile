@@ -1,0 +1,43 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = 2
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "f41-cloud-virtualbox"
+  config.vm.box_url = "https://mirror.datacenter.by/pub/fedoraproject.org/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-41-1.4.x86_64.vagrant.virtualbox.box"
+
+#  config.vm.provision "ansible" do |ansible|
+#    ansible.verbose = "vvv"
+#    ansible.playbook = "playbook.yml"
+#    ansible.become = "true"
+#  end
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 256
+    v.cpus = 1
+  end
+
+  config.vm.define "nfss" do |nfss|
+    nfss.vm.network "private_network", ip: "192.168.56.101" 
+    nfss.vm.hostname = "nfss"
+    nfss.ssh.insert_key = false
+    nfss.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+        /vagrant/nfss_script.sh
+    SHELL
+  end
+
+  config.vm.define "nfsc" do |nfsc|
+    nfsc.vm.network "private_network", ip: "192.168.56.102"
+    nfsc.vm.hostname = "nfsc"
+    nfsc.ssh.insert_key = false
+    nfsc.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+       /vagrant/nfsc_script.sh
+    SHELL
+  end
+
+end
