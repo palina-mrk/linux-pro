@@ -10,7 +10,7 @@ sudo chown -R nobody:nogroup $SHAREDFOLDER/upload
 sudo chmod 777 $SHAREDFOLDER/upload
 sudo -i
 cat << EOF > /etc/exports 
-/srv/share 192.168.56.102/24(rw,sync,no_subtree_check,root_squash)
+$SHAREDFOLDER $CLIENTIP(rw,sync,no_subtree_check,root_squash)
 EOF
 chmod 777 /etc/exports
 su vagrant
