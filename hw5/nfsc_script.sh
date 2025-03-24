@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVERIP='192.168.56.101/24'
+SERVERIP='192.168.56.101'
 SHAREDFOLDER='/srv/share'
 
 sudo mv /vagrant/id* /home/vagrant/.ssh/
