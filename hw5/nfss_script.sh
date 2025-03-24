@@ -2,6 +2,7 @@
 
 CLIENTIP='192.168.56.102/24'
 SHAREDFOLDER='/srv/share'
+sudo mv /vagrant/id* /home/vagrant/.ssh/
 
 sudo apt -y install nfs-kernel-server
 sudo mkdir -p $SHAREDFOLDER/upload
