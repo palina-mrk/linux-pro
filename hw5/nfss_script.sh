@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CLIENTIP='192.168.56.102/24'
+CLIENTIP='192.168.56.102'
 SHAREDFOLDER='/srv/share'
 
 sudo apt -y install nfs-kernel-server
