@@ -1,18 +1,10 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-VAGRANTFILE_API_VERSION = 2
+ENV['VAGRANT_SERVER_URL'] = 'https://vagrant.elab.pro'
 
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "f41-cloud-virtualbox"
-  config.vm.box_url = "https://mirror.datacenter.by/pub/fedoraproject.org/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-VirtualBox-41-1.4.x86_64.vagrant.virtualbox.box"
-
-#  config.vm.provision "ansible" do |ansible|
-#    ansible.verbose = "vvv"
-#    ansible.playbook = "playbook.yml"
-#    ansible.become = "true"
-#  end
-
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-24.04"
   config.vm.provider "virtualbox" do |v|
     v.memory = 256
     v.cpus = 1
@@ -39,5 +31,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
        /vagrant/nfsc_script.sh
     SHELL
   end
-
 end
+
