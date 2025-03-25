@@ -88,7 +88,8 @@ sudo -i
 ### 2a. Проверка работоспособности
 
  - На сервере запускаем первый проверочный скрипт, \
-   он создаёт файлы в экспортированной директории:
+   он создаёт файл в экспортированной директории \
+   и выводит информацию об экспортах командой ```exportfs -s```:
 
 ```
 /vagrant/nfss_check01.sh
@@ -103,6 +104,8 @@ sudo -i
 /vagrant/nfsc_check01.sh
 ``` 
 
+![02](./screenshots/02.png)
+
  - На сервере запускаем второй проверочный скрипт, \
    он проверяет наличие всех файлов:
 
@@ -110,7 +113,7 @@ sudo -i
 /vagrant/nfss_check02.sh
 ``` 
 
-![02](./screenshots/02.png)
+![03](./screenshots/03.png)
 
 ### 2b. Проверка работы после перезагрузки
 
@@ -129,7 +132,7 @@ vagrant ssh nfsc
 /vagrant/nfsc_check02.sh
 ``` 
 
-![03](./screenshots/03.png)
+![04](./screenshots/04.png)
 
   - перезагружаем сервер,
 
@@ -148,7 +151,7 @@ sudo -i
 /vagrant/nfss_check03.sh
 ``` 
 
-![04](./screenshots/04.png)
+![05](./screenshots/05.png)
 
   - перезагружаем клиент,
 
@@ -168,7 +171,7 @@ sudo -i
 /vagrant/nfsс_check03.sh
 ``` 
 
-![05](./screenshots/05.png)
+![06](./screenshots/06.png)
 
    - на сервере запускаем четвёртый проверочный скрипт \
      для проверки наличия всех созданных файлов \
@@ -178,4 +181,4 @@ sudo -i
 /vagrant/nfss_check04.sh
 ``` 
 
-![06](./screenshots/06.png)
+![07](./screenshots/07.png)
