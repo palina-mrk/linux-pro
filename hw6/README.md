@@ -10,6 +10,8 @@
 
   2. Создать свой репозиторий и разместить там собранный пакет. 
 
+  3. Добавить в репозиторий ещё один пакет
+
 **Реализация:**
 
   - написан Vagrantfile для создания  VM (ОС fedora-41) 
@@ -129,9 +131,10 @@ createrepo /usr/share/nginx/html/repo/
    Настраиваем в nginx доступ к листингу каталога: добавляем в \
    ```/etc/nginx/nginx.conf ``` к блоку ```server``` строки
 
-> index index.html index.htm;
-
-> autoindex on;
+```
+index index.html index.htm;
+autoindex on;
+```
 
 ![09](./screenshots/09.png)
 
