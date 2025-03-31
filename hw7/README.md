@@ -103,3 +103,47 @@ sudo vgs
 ```
 
 ![11](./screenshots/11.png)
+
+## 4. Включаем меню загрузчика Grub в Fedora
+
+  - Правим ```/etc/default/grub```: разрешаем rescue mode: стваим ```GRUB_DISABLE_RECOVERY="false"```, \
+    ставим задержку для выбора пункта меню в 10 секунд: ```GRUB_TIMEOUT=10```
+    
+```
+sudo vi /etc/default/grub
+```
+
+![20](./screenshots/20.png)
+
+ - пересобираем загрузчик:
+
+```
+sudo grub2-mkconfig
+sudo reboot
+```
+
+![21](./screenshots/21.png)
+
+### 5a. Вход через ```init=/bin/bash```
+
+ - перезагружаемся и попадаем на страницу загрузчика ```grub```.  Нажимаем ```e``` \
+  и добавляем слова ```init=/bin/bash``` в конец строки, которая начинается с ```linux```. \
+  Затем ```Ctrl+x```, и после загрузки сразу получаем права ```root```.
+
+![22](./screenshots/22.png)
+
+ - перемонтируем корневую файловую систему в режиме ```read/write```. \
+   Затем, чтобы убедиться в наличии прав, создаю файл в директории ```/home/vbox```:
+
+```
+mount -o remount,rw /
+mount | grep root
+echo "12345" >> /home/vbox/file1.txt 
+cat /home/vbox/file1.txt
+```
+
+![23](./screenshots/23.png)
+
+### 5b. Вход через ```rescue mode```
+
+ - В fedora даже в recovery mode система требует пароль. 
