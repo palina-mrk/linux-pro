@@ -94,7 +94,7 @@ vi /boot/default/grub.cfg
 reboot
 ```
 
-[10](./screenshots/10.png)
+![10](./screenshots/10.png)
 
   - перезагружаемся и убеждаемся, что изменения приняты:
 
@@ -102,4 +102,4 @@ reboot
 sudo vgs
 ```
 
-[11](./screenshots/11.png)
+![11](./screenshots/11.png)
