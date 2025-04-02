@@ -64,7 +64,7 @@ vagrant ssh
 check-nginx.sh
 ```
 
-  - видим результат:
+  - видим результат (чтобы выйти из просмотра статуса nginx-second и из просмотра статуса nginx-first, нажимаем ```q```)
 
 ![04](./screenshots/04.png)
 ![05](./screenshots/05.png)
