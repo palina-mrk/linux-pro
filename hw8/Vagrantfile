@@ -7,35 +7,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "f41-cloud-libvirt"
   config.vm.box_url = "https://gb.mirrors.cicku.me/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt-41-1.4.x86_64.vagrant.libvirt.box"
 
- config.vm.define "server" do |server|
-#   server.vm.host_name = "server-dev.example.com"
-   server.vm.network "forwarded_port", guest: "80", host: "1025" 
-   server.vm.box_check_update = false
-   server.vm.hostname = "server"
-   server.ssh.insert_key = false
-   server.vm.provider :libvirt do |domain|
-       domain.cpus = 1
-       domain.memory = 765
-      end
-end
-
  config.vm.define "client" do |client|
    client.vm.box_check_update = false
 #   client.vm.host_name = "client-dev.example.com"
    client.vm.hostname = "client"
    client.ssh.insert_key = false
    client.vm.provider :libvirt do |domain|
-       domain.cpus = 1
-       domain.memory = 765
-      end
-end
-
- config.vm.define "logserver" do |logserver|
-   logserver.vm.box_check_update = false
-#   logserver.vm.host_name = "log-dev.example.com"
-   logserver.vm.hostname = "logserver"
-   logserver.ssh.insert_key = false
-   logserver.vm.provider :libvirt do |domain|
        domain.cpus = 1
        domain.memory = 765
       end
