@@ -66,6 +66,6 @@ check-nginx.sh
 
   - видим результат (чтобы выйти из просмотра статуса nginx-second и из просмотра статуса nginx-first, нажимаем ```q```)
 
+![03](./screenshots/03.png)
 ![04](./screenshots/04.png)
 ![05](./screenshots/05.png)
-![06](./screenshots/06.png)
